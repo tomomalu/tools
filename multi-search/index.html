@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi Search</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'></circle><line x1='21' y1='21' x2='16.65' y2='16.65'></line></svg>" type="image/svg+xml">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Google Fonts - Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light background */
+            color: #1f2937; /* Default text color (gray-800) */
+        }
+        /* Custom styles for the search history dropdown */
+        .search-history-dropdown {
+            position: absolute;
+            width: calc(100% - 2rem); /* Adjust based on parent padding */
+            max-height: 200px; /* ドロップダウンの最大高さを調整 */
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            z-index: 10; /* Ensure it's above other content */
+            top: 100%; /* Position below the input */
+            left: 0;
+            transform: translateY(0.5rem); /* Small gap below input */
+        }
+        .search-history-item { /* saved-keyword-item から分離 */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #e5e7eb; /* gray-200 */
+        }
+        .search-history-item:last-child {
+            border-bottom: none;
+        }
+        .search-history-item:hover {
+            background-color: #f3f4f6; /* gray-100 */
+        }
+        .dropdown-section-title {
+            font-weight: 600; /* font-semibold */
+            padding: 0.75rem 1rem;
+            background-color: #f9fafb; /* gray-50 */
+            border-bottom: 1px solid #e5e7eb; /* gray-200 */
+            color: #1f2937; /* gray-800 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dropdown-clear-button {
+            color: #6b7280; /* gray-500 */
+            font-size: 0.875rem; /* text-sm */
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .dropdown-clear-button:hover {
+            color: #ef4444; /* red-500 */
+        }
+        .action-buttons-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem; /* Space between icons */
+        }
+        .save-history-item-button, .remove-item-button {
+            display: flex; /* Flexbox for centering SVG */
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem; /* Small padding for clickable area */
+            border-radius: 0.25rem; /* Slightly rounded */
+            transition: background-color 0.2s ease;
+        }
+        .save-history-item-button:hover {
+            background-color: #e0e7ff; /* blue-100 */
+        }
+        .remove-item-button:hover {
+            background-color: #fee2e2; /* red-100 */
+        }
+        /* Saved Keywords styling for main section */
+        .saved-keyword-item-main {
+            cursor: pointer;
+            background-color: #e9d5ff; /* bg-purple-100 */
+            color: #6b21a8; /* text-purple-800 */
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 500; /* font-medium */
+            padding: 0.25rem 0.75rem; /* px-3 py-1 */
+            border-radius: 9999px; /* rounded-full */
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+            display: inline-flex; /* For spacing */
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .saved-keyword-item-main:hover {
+            background-color: #c4b5fd; /* hover:bg-purple-200 */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Multi Search</h1>
+        </div>
+
+        <!-- 検索入力とボタン -->
+        <div class="relative flex flex-col sm:flex-row gap-4 mb-6">
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="検索キーワードを入力"
+                class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white"
+            >
+            <button
+                id="searchButton"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform"
+            >
+                検索
+            </button>
+
+            <!-- 検索履歴 ドロップダウン -->
+            <div id="searchHistoryDropdown" class="search-history-dropdown hidden">
+                <!-- 検索履歴セクション -->
+                <div class="dropdown-section-title">
+                    <span>検索履歴</span>
+                    <button id="clearHistoryButton" class="dropdown-clear-button">クリア</button>
+                </div>
+                <div id="historyItemsContainer">
+                    <div id="noHistoryMessage" class="p-4 text-gray-500 text-sm text-center hidden">検索履歴はありません。</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 検索サイト選択チェックボックス -->
+        <div class="mb-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="amazonCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">Amazon</span>
+            </label>
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="aliexpressCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">Aliexpress</span>
+            </label>
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="rakutenCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">楽天</span>
+            </label>
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="yahooShoppingCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">ヤフーショッピング</span>
+            </label>
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="yahooCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">ヤフオク!</span>
+            </label>
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="mercariCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">メルカリ</span>
+            </label>
+            <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <input type="checkbox" id="googleCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
+                <span class="ml-2 text-gray-800 font-medium">Google</span>
+            </label>
+        </div>
+
+        <!-- 検索結果表示エリア -->
+        <div id="resultsContainer" class="space-y-4 mb-8">
+            <!-- 検索結果がここに動的に追加されます -->
+        </div>
+
+        <!-- 保存済みキーワードセクション (メインコンテンツ) -->
+        <div class="mb-8 p-6 bg-gray-50 rounded-xl shadow-inner">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
+                保存済みキーワード
+                <button id="clearSavedKeywordsButton" class="text-sm text-gray-400 hover:text-red-500 transition-colors">
+                    クリア
+                </button>
+            </h2>
+            <div id="savedKeywordsContainer" class="flex flex-wrap gap-2">
+                <!-- 保存済みキーワードがここに動的に追加されます -->
+            </div>
+            <p id="noSavedKeywordsMessage" class="text-gray-500 text-sm mt-2 hidden">保存済みキーワードはありません。</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM要素の取得
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const siteCheckboxes = document.querySelectorAll('.site-checkbox'); // 全てのサイトチェックボックス
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        // 保存済みキーワード関連のDOM要素 (メインコンテンツ)
+        const savedKeywordsContainer = document.getElementById('savedKeywordsContainer');
+        const clearSavedKeywordsButton = document.getElementById('clearSavedKeywordsButton'); // メインコンテンツのクリアボタン
+        const noSavedKeywordsMessage = document.getElementById('noSavedKeywordsMessage'); // メインコンテンツのメッセージ
+
+        // 検索履歴ドロップダウン関連のDOM要素
+        const searchHistoryDropdown = document.getElementById('searchHistoryDropdown');
+        const historyItemsContainer = document.getElementById('historyItemsContainer');
+        const clearHistoryButton = document.getElementById('clearHistoryButton'); // ドロップダウン内の検索履歴クリアボタン
+        const noHistoryMessage = document.getElementById('noHistoryMessage'); // ドロップダウン内の検索履歴メッセージ
+
+        // ローカルストレージのキー
+        const HISTORY_KEY = 'multiSiteSearchHistory';
+        const SAVED_KEYWORDS_KEY = 'multiSiteSavedKeywords';
+        const SITE_SETTINGS_KEY = 'multiSiteSearchSiteSettings'; // サイト設定は引き続き保存
+
+        // 各サイトの検索URLのベース
+        const searchUrls = {
+            amazon: 'https://www.amazon.co.jp/s?k=',
+            aliexpress: 'https://ja.aliexpress.com/wholesale?SearchText=',
+            rakuten: 'https://search.rakuten.co.jp/search/mall/',
+            yahooShopping: 'https://shopping.yahoo.co.jp/search?p=',
+            yahoo: 'https://auctions.yahoo.co.jp/search/search?p=',
+            mercari: 'https://jp.mercari.com/search?keyword=',
+            google: 'https://www.google.com/search?q='
+        };
+
+        // 各サイトのロゴ（SVG）
+        const siteLogos = {};
+
+        /**
+         * 検索結果のリンク要素を生成し、resultsContainerに追加する関数
+         * @param {string} siteName - サイトの名前 (例: 'Amazon')
+         * @param {string} url - 検索結果ページのURL
+         * @param {string} siteId - サイトのID (例: 'amazon')
+         */
+        function createResultLink(siteName, url, siteId) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-shadow';
+
+            const siteNameSpan = document.createElement('span');
+            siteNameSpan.className = 'text-lg font-semibold text-gray-800';
+            siteNameSpan.textContent = siteName;
+            
+            const linkButton = document.createElement('a');
+            linkButton.href = url;
+            linkButton.target = '_blank'; // 新しいタブで開く
+            linkButton.rel = 'noopener noreferrer'; // セキュリティ対策
+            linkButton.className = 'bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition duration-300 ease-in-out';
+            linkButton.textContent = '検索結果を見る';
+
+            resultDiv.appendChild(siteNameSpan);
+            resultDiv.appendChild(linkButton);
+            resultsContainer.appendChild(resultDiv);
+        }
+
+        /**
+         * 検索履歴をローカルストレージから読み込み、ドロップダウンに表示する
+         */
+        function loadSearchHistory() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            historyItemsContainer.innerHTML = ''; // 既存の履歴をクリア
+
+            if (history.length === 0) {
+                noHistoryMessage.classList.remove('hidden');
+                clearHistoryButton.classList.add('hidden'); // 履歴がない場合はクリアボタンも隠す
+            } else {
+                noHistoryMessage.classList.add('hidden');
+                clearHistoryButton.classList.remove('hidden'); // 履歴がある場合はクリアボタンを表示
+                history.forEach(query => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'search-history-item';
+                    historyItem.innerHTML = `
+                        <span class="text-gray-700">${query}</span>
+                        <div class="action-buttons-container">
+                            <button class="save-history-item-button" title="保存済みキーワードに追加">
+                                <svg class="w-4 h-4 text-gray-500 hover:text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.927 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path>
+                                </svg>
+                            </button>
+                            <button class="remove-item-button" title="履歴から削除">
+                                <svg class="w-4 h-4 text-gray-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    // 履歴アイテムのテキスト部分をクリックで検索ボックスにセット
+                    historyItem.querySelector('span').addEventListener('click', (event) => {
+                        searchInput.value = query;
+                        searchButton.click();
+                        searchHistoryDropdown.classList.add('hidden');
+                        event.stopPropagation(); // 親要素へのイベント伝播を停止
+                    });
+                    historyItem.querySelector('.save-history-item-button').addEventListener('click', (event) => {
+                        saveKeyword(query);
+                        event.stopPropagation(); // 親要素へのイベント伝播を停止
+                    });
+                    historyItem.querySelector('.remove-item-button').addEventListener('click', (event) => {
+                        removeSearchHistoryItem(query);
+                        event.stopPropagation(); // 親要素へのイベント伝播を停止
+                    });
+                    historyItemsContainer.appendChild(historyItem);
+                });
+            }
+        }
+
+        /**
+         * 検索履歴から特定のアイテムを削除する
+         * @param {string} queryToRemove - 削除する検索キーワード
+         */
+        function removeSearchHistoryItem(queryToRemove) {
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            history = history.filter(item => item !== queryToRemove);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            loadSearchHistory();
+            if (history.length === 0) { // 保存済みキーワードは別セクションなので、履歴が空になったら閉じる
+                searchHistoryDropdown.classList.add('hidden');
+            }
+        }
+
+        /**
+         * 検索履歴をローカルストレージに保存する
+         * @param {string} query - 保存する検索キーワード
+         */
+        function saveSearchHistory(query) {
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            history = history.filter(item => item !== query);
+            history.unshift(query);
+            if (history.length > 10) {
+                history = history.slice(0, 10);
+            }
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            // ドロップダウンが開いている場合は履歴を再表示
+            if (!searchHistoryDropdown.classList.contains('hidden')) {
+                loadSearchHistory();
+            }
+        }
+
+        /**
+         * 保存済みキーワードをローカルストレージから読み込み、メインコンテンツに表示する
+         */
+        function loadSavedKeywords() {
+            const savedKeywords = JSON.parse(localStorage.getItem(SAVED_KEYWORDS_KEY) || '[]');
+            savedKeywordsContainer.innerHTML = ''; // 既存のキーワードをクリア
+
+            if (savedKeywords.length === 0) {
+                noSavedKeywordsMessage.classList.remove('hidden');
+            } else {
+                noSavedKeywordsMessage.classList.add('hidden');
+                savedKeywords.forEach(keyword => {
+                    const keywordItem = document.createElement('span');
+                    keywordItem.className = 'saved-keyword-item-main'; // メインセクション用のクラス
+                    keywordItem.innerHTML = `
+                        ${keyword}
+                        <button class="remove-item-button ml-1" title="保存済みキーワードから削除">
+                            <svg class="w-4 h-4 text-gray-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    `;
+                    // キーワードアイテム全体をクリックで検索ボックスにセット
+                    keywordItem.addEventListener('click', (event) => {
+                        // 削除ボタンがクリックされた場合は何もしない
+                        if (event.target.closest('.remove-item-button')) {
+                            return;
+                        }
+                        searchInput.value = keyword;
+                    });
+                    keywordItem.querySelector('.remove-item-button').addEventListener('click', (event) => {
+                        removeSavedKeywordItem(keyword);
+                        event.stopPropagation(); // 親要素へのイベント伝播を停止
+                    });
+                    savedKeywordsContainer.appendChild(keywordItem);
+                });
+            }
+        }
+
+        /**
+         * 保存済みキーワードから特定のアイテムを削除する
+         * @param {string} keywordToRemove - 削除するキーワード
+         */
+        function removeSavedKeywordItem(keywordToRemove) {
+            let savedKeywords = JSON.parse(localStorage.getItem(SAVED_KEYWORDS_KEY) || '[]');
+            savedKeywords = savedKeywords.filter(item => item !== keywordToRemove);
+            localStorage.setItem(SAVED_KEYWORDS_KEY, JSON.stringify(savedKeywords));
+            loadSavedKeywords(); // 保存済みキーワードを再表示
+        }
+
+        /**
+         * キーワードをローカルストレージに保存する
+         * @param {string} keyword - 保存するキーワード
+         */
+        function saveKeyword(keyword) {
+            let savedKeywords = JSON.S.parse(localStorage.getItem(SAVED_KEYWORDS_KEY) || '[]');
+            if (!savedKeywords.includes(keyword)) {
+                savedKeywords.push(keyword);
+                localStorage.setItem(SAVED_KEYWORDS_KEY, JSON.stringify(savedKeywords));
+                loadSavedKeywords(); // 保存済みキーワードを再表示
+            } else {
+                console.log('このキーワードはすでに保存されています。');
+            }
+        }
+
+        /**
+         * 検索サイトのチェックボックスの状態をローカルストレージから読み込み、適用する
+         */
+        function loadSiteSettings() {
+            const savedSettings = JSON.parse(localStorage.getItem(SITE_SETTINGS_KEY) || '{}');
+            siteCheckboxes.forEach(checkbox => {
+                checkbox.checked = (savedSettings[checkbox.id] !== undefined) ? savedSettings[checkbox.id] : true;
+            });
+        }
+
+        /**
+         * 検索サイトのチェックボックスの状態をローカルストレージに保存する
+         */
+        function saveSiteSettings() {
+            const settings = {};
+            siteCheckboxes.forEach(checkbox => {
+                settings[checkbox.id] = checkbox.checked;
+            });
+            localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(settings));
+        }
+
+        // --- イベントリスナー ---
+
+        // 検索ボタンクリック時の処理
+        searchButton.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            resultsContainer.innerHTML = ''; // 既存の検索結果をクリア
+
+            if (!query) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'p-4 bg-yellow-100 text-yellow-800 rounded-lg text-center';
+                messageDiv.textContent = '検索キーワードを入力してください。';
+                resultsContainer.appendChild(messageDiv);
+                return;
+            }
+
+            // 検索中メッセージを表示
+            const searchingMessageDiv = document.createElement('div');
+            searchingMessageDiv.className = 'p-4 bg-blue-100 text-blue-800 rounded-lg text-center animate-pulse';
+            searchingMessageDiv.textContent = '検索中...';
+            resultsContainer.appendChild(searchingMessageDiv);
+
+            saveSearchHistory(query); // 検索履歴に保存
+
+            const encodedQuery = encodeURIComponent(query);
+
+            let anySiteSelected = false;
+            // 検索結果リンクを生成する前に、検索中メッセージを少し表示させるための遅延
+            setTimeout(() => {
+                resultsContainer.innerHTML = ''; // 検索中メッセージをクリア
+
+                siteCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        anySiteSelected = true;
+                        const siteName = checkbox.nextElementSibling.textContent;
+                        const siteId = checkbox.id.replace('Checkbox', '');
+                        let url = searchUrls[siteId] + encodedQuery; // 基本URLにキーワードを追加
+
+                        // 各サイト固有の並び順パラメータを追加
+                        if (siteId === 'rakuten') {
+                            url += '/'; // 楽天のURLには末尾にスラッシュが必要
+                        } else if (siteId === 'mercari') {
+                            url += '&sort=created_time&status=on_sale'; // メルカリの新着順
+                        } else if (siteId === 'yahoo') {
+                            url += '&s1=new'; // ヤフオク!の新着順
+                        }
+                        createResultLink(siteName, url, siteId); // siteIdを渡すように変更
+                    }
+                });
+
+                if (!anySiteSelected) {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'p-4 bg-gray-100 text-gray-700 rounded-lg text-center';
+                    messageDiv.textContent = '検索するサイトを1つ以上選択してください。';
+                    resultsContainer.appendChild(messageDiv);
+                }
+            }, 300); // 300ミリ秒の遅延
+
+        });
+
+        // Enterキーで検索を実行
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                searchButton.click();
+                searchHistoryDropdown.classList.add('hidden'); // Enterで検索したらドロップダウンを閉じる
+            }
+        });
+
+        // 検索インプットにフォーカスが当たったら履歴ドロップダウンを表示
+        searchInput.addEventListener('focus', () => {
+            loadSearchHistory(); // 最新の履歴を読み込む
+            // 保存済みキーワードはメインコンテンツに常時表示されるため、ここでは読み込まない
+            searchHistoryDropdown.classList.remove('hidden');
+        });
+
+        // document.bodyにクリックイベントリスナーを追加して、ドロップダウンを閉じる制御を行う
+        document.body.addEventListener('click', (event) => {
+            // クリックされた要素が検索入力欄でも、ドロップダウン内でもない場合、ドロップダウンを隠す
+            if (event.target !== searchInput && !searchHistoryDropdown.contains(event.target)) {
+                searchHistoryDropdown.classList.add('hidden');
+            }
+        });
+
+
+        // 検索履歴ドロップダウン内のクリアボタン
+        clearHistoryButton.addEventListener('click', () => {
+            localStorage.removeItem(HISTORY_KEY);
+            loadSearchHistory(); // 履歴をクリアして再表示
+            searchHistoryDropdown.classList.add('hidden'); // クリアしたらドロップダウンを閉じる
+        });
+
+        // メインコンテンツの保存済みキーワードクリアボタン
+        clearSavedKeywordsButton.addEventListener('click', () => {
+            localStorage.removeItem(SAVED_KEYWORDS_KEY);
+            loadSavedKeywords(); // 保存済みキーワードをクリアして再表示
+        });
+
+        // サイトチェックボックスの状態変更時に保存
+        siteCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', saveSiteSettings);
+        });
+
+        // ページロード時にすべての設定を読み込む
+        window.onload = () => {
+            loadSavedKeywords(); // 保存済みキーワードはページロード時に読み込む
+            loadSiteSettings();
+            // 検索履歴はsearchInputのフォーカス時に読み込むため、ここでは呼び出さない
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Calcurator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Interフォントを優先的に使用 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F5F5; /* 薄いグレーの背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* 縦並びに変更 */
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem; /* 全体のパディングを追加 */
+        }
+        h1 {
+            color: #2c3e50; /* ダークブルーのテキスト */
+            margin-bottom: 2rem; /* マージンを増やす */
+            font-size: 2.5rem; /* タイトルを適度なサイズに修正 */
+            font-weight: 700; /* 太字 */
+            text-align: center;
+        }
+        .main-content-container {
+            display: flex;
+            gap: 1.5rem; /* 各セクション間の隙間 */
+            flex-wrap: wrap; /* 画面幅が狭い場合に折り返す */
+            justify-content: center;
+            align-items: flex-start; /* 上端を揃える */
+            max-width: 900px; /* 全体の幅を広く */
+            width: 100%;
+        }
+        .input-section, .result-section {
+            flex: 1 1 10%; /* 300pxの最小幅を持つフレックスアイテム */
+            background-color: #fff; /* 背景色を白に変更 */
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* ドロップシャドウを追加 */
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .result-section {
+            background-color: #fff;
+            padding: 1rem;
+        }
+        .input-group {
+            margin-bottom: 0;
+            text-align: left;
+            flex: 1; /* 均等な幅にする */
+        }
+        .input-group + .input-group {
+            margin-top: 1.5rem; /* input-section内で間隔を調整 */
+        }
+        label {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: #34495e;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid #cbd5e0;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            color: #2c3e50;
+            transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            outline: none;
+        }
+        input[type="number"]:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+        }
+        /* 抵抗値が低い/高い場合の警告スタイル */
+        input[type="number"].resistance-alert {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+        }
+        .result-box {
+            background-color: #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-top: 0; /* 親コンテナのgapで調整 */
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            display: flex;
+            flex-direction: column; /* 縦並びにする */
+            justify-content: center;
+            align-items: center;
+            min-height: 50px; /* 高さの最小値を修正 */
+        }
+        .result-box.alert {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        .unit {
+            font-size: 1rem;
+            color: #7f8c8d;
+            margin-left: 0.5rem;
+        }
+        /* 設定ボタンとモーダルのスタイル */
+        .settings-link {
+            margin-top: 0.5rem;
+            text-align: right;
+        }
+        .settings-link a {
+            color: #7f8c8d; /* グレーの文字色 */
+            font-size: 0.9rem;
+            text-decoration: none; /* ここをnoneに変更 */
+            cursor: pointer;
+            transition: color 0.3s ease-in-out;
+        }
+        .settings-link a:hover {
+            color: #34495e;
+        }
+        .modal {
+            display: none; /* 初期状態では非表示 */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4); /* 背景を暗く */
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
+            text-align: left;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+        }
+        .modal-content h2 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* 電池アイコンのスタイル */
+        .battery-icon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 0px;
+        }
+        .battery-icon {
+            width: 80px;
+            height: 20px;
+            border: none;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 2px;
+        }
+        .battery-icon::after {
+            content: '';
+            width: 6px;
+            height: 12px;
+            background-color: #333;
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 0 2px 2px 0;
+        }
+        .battery-bar {
+            width: 12px;
+            height: 100%;
+            border-radius: 2px;
+            background-color: #ccc;
+        }
+        /* 新しいタイトルコンテナのスタイル */
+        .title-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .title-container h1 {
+            font-size: 2.5rem; /* サイズを調整 */
+            font-weight: 800; /* さらに太く */
+            color: #34495e;
+            margin: 0;
+            letter-spacing: -1px;
+        }
+        .title-container p {
+            font-size: 1.25rem;
+            color: #7f8c8d;
+            margin-top: 0.5rem;
+        }
+        .current-value {
+            font-size: 1rem; /* 文字サイズを小さく */
+        }
+
+        /* 単位とラベルのスタイル */
+        .unit-label {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.25rem;
+            font-size: 1.5rem; /* 単位を大きく */
+            font-weight: 600;
+        }
+        .unit-label-small {
+            font-size: 0.75rem; /* 日本語を小さく */
+            font-weight: 400;
+            color: #7f8c8d;
+        }
+        
+        /* 早見表のスタイル */
+        .chart-container {
+            margin-top: 2.5rem;
+            background-color: transparent;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: none;
+        }
+        .chart-container h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: #2c3e50;
+        }
+        .setting-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .setting-table th, .setting-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.8rem; /* フォントサイズを追加 */
+        }
+        .setting-table th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+            color: #4a5568;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .setting-table tr:hover {
+            background-color: #f0f4f8;
+        }
+        .setting-table td.highlight {
+            background-color: #DCDCDC; /* 色を薄いグレーに変更 */
+            transition: background-color 0.3s ease-in-out;
+        }
+        .setting-table td:nth-child(1) {
+            font-weight: 600;
+        }
+        .setting-table tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-container">
+        <h1>POWER CALCULATOR</h1>
+    </div>
+
+    <div class="main-content-container">
+        <!-- 抵抗のセクション -->
+        <div class="input-section">
+            <div class="input-group">
+                <label for="resistance" class="unit-label">
+                    Ω <span class="unit-label-small">抵抗</span>
+                </label>
+                <input type="number" id="resistance" placeholder="例: 0.3" step="0.01" value="0.4" min="0.2" max="1.2">
+            </div>
+            <div class="settings-link">
+                <a href="#" id="openModalButton">⚙️ 設定</a>
+            </div>
+        </div>
+
+        <!-- 電圧のセクション -->
+        <div class="input-section">
+            <div class="input-group">
+                <label for="voltage" class="unit-label">
+                    V <span class="unit-label-small">電圧</span>
+                </label>
+                <input type="number" id="voltage" placeholder="例: 4.2" step="0.1" value="4.0" min="3.0" max="4.2">
+            </div>
+        </div>
+
+        <!-- 結果表示のセクション -->
+        <div class="result-section">
+            <!-- 電力 (W) の表示を縦並びに -->
+            <div class="result-box" id="powerResult">
+                <div class="unit-label">
+                    W <span class="unit-label-small">電力</span>
+                </div>
+                <div>
+                    <span id="powerValue">0</span><span class="unit">W</span>
+                </div>
+                <div class="battery-icon-container">
+                    <div class="battery-icon" id="batteryIcon">
+                        <div class="battery-bar" id="bar1"></div>
+                        <div class="battery-bar" id="bar2"></div>
+                        <div class="battery-bar" id="bar3"></div>
+                        <div class="battery-bar" id="bar4"></div>
+                        <div class="battery-bar" id="bar5"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 電流 (A) の表示を横並びに -->
+            <div class="result-box" id="currentResult" style="flex-direction: row; justify-content: center; align-items: center; gap: 0.5rem; text-align: center; padding: 0;">
+                <div class="unit-label">
+                    A <span class="unit-label-small">電流</span>
+                </div>
+                <span id="currentValue">0</span><span class="unit">A</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 早見表のコンテナ -->
+    <div class="chart-container">
+        <h2>💨VAPEセッティング分類表（目安）</h2>
+        <table class="setting-table">
+            <thead>
+                <tr>
+                    <th>サイズ感</th>
+                    <th>ワット数</th>
+                    <th>エアフロー</th>
+                    <th>抵抗値</th>
+                    <th>リキッド比率（VG:PG）</th>
+                    <th>特徴</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="rowXSmall">
+                    <td>XSmall</td>
+                    <td id="wattXSmall">20〜30W</td>
+                    <td>10％開け（超タイト）</td>
+                    <td id="ohmXSmall">0.9〜1.2Ω</td>
+                    <td>50:50〜60:40</td>
+                    <td>味重視、MTL特化、煙少なめ、ニコ系に最適</td>
+                </tr>
+                <tr id="rowSmall">
+                    <td>Small</td>
+                    <td id="wattSmall">30〜40W</td>
+                    <td>25％開け（ややタイト）</td>
+                    <td id="ohmSmall">0.6〜0.9Ω</td>
+                    <td>60:40〜70:30</td>
+                    <td>濃い味＋ちょっと煙、セミMTL向け</td>
+                </tr>
+                <tr id="rowMedium">
+                    <td>Medium</td>
+                    <td id="wattMedium">40〜50W</td>
+                    <td>50％開け（半分）</td>
+                    <td id="ohmMedium">0.4〜0.6Ω</td>
+                    <td>70:30</td>
+                    <td>バランス◎！味と煙のベストミックス、DL初心者にも</td>
+                </tr>
+                <tr id="rowLarge">
+                    <td>Large</td>
+                    <td id="wattLarge">45〜55W</td>
+                    <td>75％開け（広め）</td>
+                    <td id="ohmLarge">0.25〜0.4Ω</td>
+                    <td>70:30〜80:20</td>
+                    <td>爆煙寄り、トリック入門向け、熱くなりすぎ注意</td>
+                </tr>
+                <tr id="rowXLarge">
+                    <td>XLarge</td>
+                    <td id="wattXLarge">55〜65W↑</td>
+                    <td>全開（スカスカ）</td>
+                    <td id="ohmXLarge">0.1〜0.25Ω</td>
+                    <td>80:20〜90:10</td>
+                    <td>爆煙・爆熱・ガチトリック向け、供給注意⚠</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- モーダルウィンドウ -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>抵抗警告設定</h2>
+            <div class="input-group">
+                <label for="resistanceLowerLimitInput">抵抗警告下限 (Ω):</label>
+                <input type="number" id="resistanceLowerLimitInput" step="0.01" value="0.24">
+            </div>
+            <div class="input-group">
+                <label for="resistanceUpperLimitInput">抵抗警告上限 (Ω):</label>
+                <input type="number" id="resistanceUpperLimitInput" step="0.01" value="0.55">
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // DOM要素を取得
+        const resistanceInput = document.getElementById('resistance');
+        const voltageInput = document.getElementById('voltage');
+        const powerResultBox = document.getElementById('powerResult');
+        const powerValueSpan = document.getElementById('powerValue');
+        const currentResultBox = document.getElementById('currentResult');
+        const currentValueSpan = document.getElementById('currentValue');
+        const batteryIcon = document.getElementById('batteryIcon');
+        const bars = [];
+        for (let i = 1; i <= 5; i++) {
+            bars.push(document.getElementById(`bar${i}`));
+        }
+        
+        // 早見表のDOM要素を取得
+        const wattCells = {
+            'XSmall': document.getElementById('wattXSmall'),
+            'Small': document.getElementById('wattSmall'),
+            'Medium': document.getElementById('wattMedium'),
+            'Large': document.getElementById('wattLarge'),
+            'XLarge': document.getElementById('wattXLarge')
+        };
+        const ohmCells = {
+            'XSmall': document.getElementById('ohmXSmall'),
+            'Small': document.getElementById('ohmSmall'),
+            'Medium': document.getElementById('ohmMedium'),
+            'Large': document.getElementById('ohmLarge'),
+            'XLarge': document.getElementById('ohmXLarge')
+        };
+        
+        // モーダル関連のDOM要素を取得
+        const openModalButton = document.getElementById('openModalButton');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeButton = document.querySelector('.close-button');
+
+        // 設定入力フィールドのDOM要素を取得
+        const resistanceLowerLimitInput = document.getElementById('resistanceLowerLimitInput');
+        const resistanceUpperLimitInput = document.getElementById('resistanceUpperLimitInput');
+        
+        // 電力警告の上限値は固定
+        const powerLimit = 80;
+
+        /**
+         * 電力（W）と電流（A）を計算し、結果を表示する関数
+         * P = V^2 / R および I = V / R の公式を使用
+         */
+        function calculatePowerAndCurrent() {
+            // 入力値を取得し、数値に変換
+            const resistance = parseFloat(resistanceInput.value);
+            const voltage = parseFloat(voltageInput.value);
+
+            // 設定値を取得し、数値に変換
+            const resistanceLowerLimit = parseFloat(resistanceLowerLimitInput.value);
+            const resistanceUpperLimit = parseFloat(resistanceUpperLimitInput.value);
+
+            // 抵抗値が下限値以下、または上限値以上の場合に警告スタイルを適用
+            if (!isNaN(resistance) && (resistance <= resistanceLowerLimit || resistance >= resistanceUpperLimit)) {
+                resistanceInput.classList.add('resistance-alert');
+            } else {
+                resistanceInput.classList.remove('resistance-alert');
+            }
+
+            // 両方の入力が有効な数値であることを確認
+            if (!isNaN(resistance) && !isNaN(voltage) && resistance !== 0) {
+                // 電力Pを計算
+                const power = (voltage * voltage) / resistance;
+                // 電流Iを計算
+                const current = voltage / resistance;
+
+                // 結果を小数点以下2桁に丸める
+                const roundedPower = power.toFixed(2);
+                const roundedCurrent = current.toFixed(2);
+
+                // 結果を表示
+                powerValueSpan.textContent = roundedPower;
+                currentValueSpan.textContent = roundedCurrent;
+
+                // 電力上限値を超えているかチェックし、スタイルを適用
+                if (power >= powerLimit) {
+                    powerResultBox.classList.add('alert');
+                } else {
+                    powerResultBox.classList.remove('alert');
+                }
+
+                // 電池アイコンの表示を更新
+                updateBatteryIcon(power);
+                // 早見表のハイライトを更新
+                highlightTable(power, resistance);
+
+            } else {
+                // 入力が無効な場合は0を表示し、アラートスタイルを削除
+                powerValueSpan.textContent = '0';
+                currentValueSpan.textContent = '0';
+                powerResultBox.classList.remove('alert');
+                updateBatteryIcon(0);
+                highlightTable(null, null); // 無効な場合はハイライトをリセット
+            }
+        }
+
+        /**
+         * 電力値に基づいて電池アイコンの表示を更新する関数
+         * @param {number} power - 計算された電力値
+         */
+        function updateBatteryIcon(power) {
+            // まず全ての棒の色をリセット
+            bars.forEach(bar => bar.style.backgroundColor = '#ccc');
+
+            // 電力値に基づいて棒の色と本数を設定
+            if (power <= 39.9) {
+                // 黄色 (合計1本)
+                bars[0].style.backgroundColor = '#fcd34d';
+            } else if (power >= 40.0 && power <= 49.9) {
+                // 緑色 (合計2本)
+                bars[0].style.backgroundColor = '#34d399';
+                bars[1].style.backgroundColor = '#34d399';
+            } else if (power >= 50.0 && power <= 59.9) {
+                // 緑色 (合計3本)
+                bars[0].style.backgroundColor = '#34d399';
+                bars[1].style.backgroundColor = '#34d399';
+                bars[2].style.backgroundColor = '#34d399';
+            } else if (power >= 60.0 && power <= 69.9) {
+                // 緑色 (合計4本)
+                bars[0].style.backgroundColor = '#34d399';
+                bars[1].style.backgroundColor = '#34d399';
+                bars[2].style.backgroundColor = '#34d399';
+                bars[3].style.backgroundColor = '#34d399';
+            } else if (power >= 70.0) {
+                // 赤色 (合計5本)
+                for (let i = 0; i < 5; i++) {
+                    bars[i].style.backgroundColor = '#ef4444';
+                }
+            }
+        }
+
+        /**
+         * 抵抗値と電力値に基づいて早見表の該当セルをハイライトする関数
+         * @param {number} power - 計算された電力値
+         * @param {number} resistance - 計算された抵抗値
+         */
+        function highlightTable(power, resistance) {
+            // まず全てのセルのハイライトを削除
+            for (const key in wattCells) {
+                wattCells[key].classList.remove('highlight');
+            }
+            for (const key in ohmCells) {
+                ohmCells[key].classList.remove('highlight');
+            }
+
+            if (power === null || isNaN(power) || resistance === null || isNaN(resistance)) return;
+
+            // 電力値の範囲に基づいてワット数のセルをハイライト
+            if (power >= 20 && power <= 30) {
+                wattCells['XSmall'].classList.add('highlight');
+            } else if (power > 30 && power <= 40) {
+                wattCells['Small'].classList.add('highlight');
+            } else if (power > 40 && power <= 50) {
+                wattCells['Medium'].classList.add('highlight');
+            } else if (power > 45 && power <= 55) {
+                wattCells['Large'].classList.add('highlight');
+            } else if (power > 55) {
+                wattCells['XLarge'].classList.add('highlight');
+            }
+
+            // 抵抗値の範囲に基づいて抵抗値のセルをハイライト
+            if (resistance >= 0.9 && resistance <= 1.2) {
+                ohmCells['XSmall'].classList.add('highlight');
+            } else if (resistance > 0.6 && resistance <= 0.9) {
+                ohmCells['Small'].classList.add('highlight');
+            } else if (resistance > 0.4 && resistance <= 0.6) {
+                ohmCells['Medium'].classList.add('highlight');
+            } else if (resistance > 0.25 && resistance <= 0.4) {
+                ohmCells['Large'].classList.add('highlight');
+            } else if (resistance > 0.1 && resistance <= 0.25) {
+                ohmCells['XLarge'].classList.add('highlight');
+            }
+        }
+
+        // モーダルを開く
+        openModalButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            settingsModal.style.display = 'block';
+        });
+
+        // モーダルを閉じる
+        closeButton.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        // モーダルの外側をクリックして閉じる
+        window.addEventListener('click', (event) => {
+            if (event.target === settingsModal) {
+                settingsModal.style.display = 'none';
+            }
+        });
+
+        // 入力フィールドの値が変更されるたびに計算関数を呼び出す
+        resistanceInput.addEventListener('input', calculatePowerAndCurrent);
+        voltageInput.addEventListener('input', calculatePowerAndCurrent);
+
+        // 設定入力フィールドの値が変更されるたびに計算関数を呼び出す
+        resistanceLowerLimitInput.addEventListener('input', calculatePowerAndCurrent);
+        resistanceUpperLimitInput.addEventListener('input', calculatePowerAndCurrent);
+
+        // ページ読み込み時に一度計算を実行（初期表示のため）
+        calculatePowerAndCurrent();
+    </script>
+</body>
+</html>
