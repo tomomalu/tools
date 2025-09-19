@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        .item-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .item-card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        .buy-button {
+            background-color: #f7a049;
+            color: #ffffff;
+            border-radius: 0.375rem; /* rounded-md */
+            transition: background-color 0.2s;
+        }
+        .buy-button:hover {
+            background-color: #e58a36;
+        }
+        .control-button {
+            border-radius: 8px;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            padding: 1.5rem;
+            position: relative;
+            max-height: 90vh; /* Added to prevent overflow on small screens */
+            overflow-y: auto; /* Added for scrolling */
+        }
+        .close-modal-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: #9ca3af; /* gray-400 */
+            transition: color 0.2s;
+        }
+        .close-modal-btn:hover {
+            color: #4b5563; /* gray-700 */
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* text-gray-700 */
+        }
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 0.5rem; /* space-x-2 */
+            accent-color: #3b82f6; /* blue-500 */
+        }
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* 上に表示 */
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* メッセージボックスのスタイル */
+        #messageBox {
+            position: fixed;
+            bottom: 4rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s, background-color 0.3s;
+            pointer-events: none;
+            z-index: 2000;
+        }
+        #messageBox.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="container space-y-6">
+        <!-- タイトルとデータ管理・追加ボタンのセクション -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Inventory Manager</h1>
+            <div class="flex items-center space-x-2">
+                <button id="addItemBtn" class="control-button px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+                    新規追加
+                </button>
+                <!-- エクスポートボタン -->
+                <button id="exportCsvBtn" class="control-button p-2 border border-blue-500 text-blue-500 bg-white hover:bg-blue-50 transition-colors" title="エクスポート">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </button>
+                <!-- インポートボタン -->
+                <label for="importCsv" class="control-button p-2 border border-blue-500 text-blue-500 bg-white hover:bg-blue-50 transition-colors cursor-pointer" title="インポート">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <input type="file" id="importCsv" accept=".csv" class="hidden">
+                </label>
+            </div>
+        </div>
+
+        <!-- フィルターと並び替えセクション -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 mb-4">
+            <div id="categoryFilterContainer" class="flex flex-wrap gap-2">
+                <p class="text-sm font-medium text-gray-700">カテゴリー:</p>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="category" value="すべて" checked>
+                    <span>すべて</span>
+                </label>
+                <!-- チェックボックスはJavaScriptで動的に追加されます -->
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                 <!-- 新しいチェックボックスを追加 -->
+                <label class="checkbox-label">
+                    <input type="checkbox" id="lowStockFilter">
+                    <span>残量20％以下のみ表示</span>
+                </label>
+                
+                <div class="flex items-center space-x-2">
+                    <label for="sortSelect" class="text-sm font-medium text-gray-700 whitespace-nowrap">並び替え:</label>
+                    <select id="sortSelect" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="name">名前</option>
+                        <option value="remaining">残量</option>
+                        <option value="purchaseDate">購入日</option>
+                    </select>
+                    <button id="sortDirectionBtn" class="p-2 text-gray-600 hover:text-gray-900 transition-colors" title="並び替え順を変更">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path id="sortDirectionIcon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m9-4v10l-4 4m0 0l-4-4m4 4V7" />
+                        </svg>
+                    </button>
+                    <!-- リストをコピーボタンをアイコンに変更 -->
+                    <div class="tooltip">
+                        <button id="copyListBtn" class="p-2 border border-transparent rounded-md hover:bg-gray-200 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                        <span class="tooltiptext">【要購入！消耗品リスト】をコピー</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4" />
+
+        <!-- 消耗品リストのコンテナ -->
+        <div id="itemsContainer" class="space-y-4">
+            <!-- ここにJavaScriptでアイテムが追加されます -->
+        </div>
+    </div>
+
+    <!-- メッセージ表示用の領域 -->
+    <div id="messageBox"></div>
+
+    <!-- 新規追加モーダル -->
+    <div id="addItemModal" class="modal hidden">
+        <div class="modal-content">
+            <button id="closeAddModalBtn" class="close-modal-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">新しい消耗品を追加</h2>
+            <form id="addItemForm" class="space-y-3">
+                <input type="text" id="itemName" placeholder="消耗品名" required class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select type="text" id="itemCategory" required class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled selected>カテゴリーを選択</option>
+                    <option value="キッチン用品">キッチン用品</option>
+                    <option value="ベビー用品">ベビー用品</option>
+                    <option value="日用品">日用品</option>
+                    <option value="その他">その他</option>
+                </select>
+                <!-- 平均値の表示と入力欄を統合 -->
+                <div id="daysToFinishContainer" class="flex flex-col space-y-1">
+                    <label class="block text-sm font-medium text-gray-700">約何日でなくなるか (日数)</label>
+                    <input type="number" id="daysToFinish" placeholder="例: 30" required class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p id="daysToFinishAverage" class="text-xs text-gray-500"></p>
+                </div>
+
+                <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mt-2">前回購入日</label>
+                <input type="date" id="purchaseDate" required class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <textarea id="itemNotes" placeholder="メモ（例：詰め替え用）" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2"></textarea>
+                
+                <!-- 残量入力方法のラジオボタン -->
+                <div>
+                    <span class="text-gray-600 font-medium">初期残量:</span>
+                    <div class="mt-1 space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="remainingMethod" value="percentage" checked class="form-radio text-blue-600" id="percentageRadio">
+                            <span class="ml-2">パーセンテージ (%)</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="remainingMethod" value="daysPassed" class="form-radio text-blue-600" id="daysPassedRadio">
+                            <span class="ml-2">経過日数 (日)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- パーセンテージ入力フィールド -->
+                <div id="percentageInputContainer" class="flex items-center space-x-2 mt-2">
+                    <input type="number" id="initialRemaining" value="100" min="0" max="100" step="1" class="w-20 p-2 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <span>%</span>
+                </div>
+                
+                <!-- 経過日数入力フィールド (最初は非表示) -->
+                <div id="daysPassedInputContainer" class="hidden flex items-center space-x-2 mt-2">
+                    <input type="number" id="daysPassed" placeholder="経過日数" min="0" class="w-20 p-2 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <span>日</span>
+                </div>
+                
+                <button type="submit" class="w-full p-3 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition-colors">追加</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const itemsContainer = document.getElementById('itemsContainer');
+            const addItemForm = document.getElementById('addItemForm');
+            const itemNameInput = document.getElementById('itemName');
+            const itemCategorySelect = document.getElementById('itemCategory');
+            const itemNotesInput = document.getElementById('itemNotes');
+            const purchaseDateInput = document.getElementById('purchaseDate');
+            const daysToFinishInput = document.getElementById('daysToFinish');
+            const daysToFinishAverage = document.getElementById('daysToFinishAverage');
+            const percentageRadio = document.getElementById('percentageRadio');
+            const daysPassedRadio = document.getElementById('daysPassedRadio');
+            const percentageInputContainer = document.getElementById('percentageInputContainer');
+            const daysPassedInputContainer = document.getElementById('daysPassedInputContainer');
+            const initialRemainingInput = document.getElementById('initialRemaining');
+            const daysPassedInput = document.getElementById('daysPassed');
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            const importCsvInput = document.getElementById('importCsv');
+            const sortSelect = document.getElementById('sortSelect');
+            const sortDirectionBtn = document.getElementById('sortDirectionBtn');
+            const addItemBtn = document.getElementById('addItemBtn');
+            const addItemModal = document.getElementById('addItemModal');
+            const closeAddModalBtn = document.getElementById('closeAddModalBtn');
+            const categoryFilterContainer = document.getElementById('categoryFilterContainer');
+            const lowStockFilterCheckbox = document.getElementById('lowStockFilter');
+            const sortDirectionIcon = document.getElementById('sortDirectionIcon');
+            const copyListBtn = document.getElementById('copyListBtn');
+            const messageBox = document.getElementById('messageBox');
+            let sortDirection = 'asc'; // 'asc' or 'desc'
+
+            // 今日の日付をデフォルト値として設定
+            const today = new Date();
+            purchaseDateInput.value = today.toISOString().split('T')[0];
+
+            // 組み込みの初期データ
+            const defaultItems = [
+                {
+                    id: 1,
+                    name: "コーヒー豆",
+                    category: "キッチン用品",
+                    purchaseDates: ["2025-09-10"],
+                    daysToFinish: 30,
+                    initialRemainingPercentage: 100,
+                    buyLink: '',
+                    notes: '深煎りで苦味の強い豆'
+                },
+                {
+                    id: 2,
+                    name: "トイレットペーパー",
+                    category: "日用品",
+                    purchaseDates: ["2025-08-20"],
+                    daysToFinish: 45,
+                    initialRemainingPercentage: 100,
+                    buyLink: 'https://example.com/toilet-paper',
+                    notes: '肌触りがやわらかいタイプ'
+                },
+                {
+                    id: 3,
+                    name: "洗剤",
+                    category: "キッチン用品",
+                    purchaseDates: ["2025-09-01"],
+                    daysToFinish: 60,
+                    initialRemainingPercentage: 100,
+                    buyLink: '',
+                    notes: '詰め替え用をストックしておく'
+                },
+                {
+                    id: 4,
+                    name: "おむつ",
+                    category: "ベビー用品",
+                    purchaseDates: ["2025-08-30"],
+                    daysToFinish: 20,
+                    initialRemainingPercentage: 100,
+                    buyLink: '',
+                    notes: 'Lサイズ'
+                }
+            ];
+
+            // ローカルストレージからデータを読み込む。データがない場合はデフォルトデータを使用する
+            let items = JSON.parse(localStorage.getItem('inventoryItems')) || defaultItems;
+
+            // 過去のデータ構造を新しい構造に変換（互換性のため）
+            items = items.map(item => {
+                if (!item.purchaseDates) {
+                    item.purchaseDates = [item.purchaseDate]; // 新しい配列に変換
+                }
+                // purchaseDateプロパティを最新の購入日として設定
+                item.purchaseDate = item.purchaseDates[item.purchaseDates.length - 1];
+                return item;
+            });
+            
+            // アイテムの状態を更新（日割りで残量を計算）
+            function updateAllItemRemaining() {
+                const today = new Date();
+                items.forEach(item => {
+                    // purchaseDatesを日付オブジェクトに変換して降順にソート
+                    // 無効な日付（NaN）をフィルタリングして除外する
+                    const sortedDates = item.purchaseDates.map(d => new Date(d)).filter(d => !isNaN(d)).sort((a, b) => b - a);
+                    
+                    // 最新の購入日をpurchaseDateプロパティに設定
+                    item.purchaseDate = sortedDates.length > 0 ? sortedDates[0].toISOString().split('T')[0] : '';
+                    
+                    const purchaseDate = new Date(item.purchaseDate);
+                    // 無効な日付の場合は計算をスキップ
+                    if (isNaN(purchaseDate.getTime())) {
+                        item.remainingPercentage = NaN;
+                        return;
+                    }
+
+                    const timeDiff = today.getTime() - purchaseDate.getTime();
+                    const daysPassed = timeDiff / (1000 * 60 * 60 * 24);
+                    
+                    // 1日あたりの消費率を計算
+                    const dailyDepletionRate = item.daysToFinish > 0 ? 100 / item.daysToFinish : 0;
+                    
+                    // 経過日数から現在の残量を計算 (0%を下回らないように修正)
+                    item.remainingPercentage = Math.max(0, item.initialRemainingPercentage - (daysPassed * dailyDepletionRate));
+                });
+                localStorage.setItem('inventoryItems', JSON.stringify(items));
+            }
+
+            updateAllItemRemaining();
+            
+            // カテゴリーフィルターを動的に生成
+            function renderCategoryFilters() {
+                // 'すべて'以外のチェックボックスを削除
+                const oldCheckboxes = categoryFilterContainer.querySelectorAll('input[name="category"]:not([value="すべて"])');
+                oldCheckboxes.forEach(cb => cb.parentElement.remove());
+
+                const categories = [...new Set(items.map(item => item.category))].sort();
+                categories.forEach(category => {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-label';
+                    label.innerHTML = `<input type="checkbox" name="category" value="${category}" checked><span>${category}</span>`;
+                    categoryFilterContainer.appendChild(label);
+                });
+            }
+
+            renderCategoryFilters();
+
+            // カテゴリーフィルターの変更イベント
+            categoryFilterContainer.addEventListener('change', (e) => {
+                const allCheckbox = categoryFilterContainer.querySelector('input[value="すべて"]');
+                const otherCheckboxes = categoryFilterContainer.querySelectorAll('input[name="category"]:not([value="すべて"])');
+                
+                if (e.target.value === 'すべて') {
+                    otherCheckboxes.forEach(cb => cb.checked = allCheckbox.checked);
+                } else {
+                    if (!e.target.checked) {
+                        allCheckbox.checked = false;
+                    } else if (Array.from(otherCheckboxes).every(cb => cb.checked)) {
+                        allCheckbox.checked = true;
+                    }
+                }
+                renderItems();
+            });
+
+
+            // 初期表示
+            renderItems();
+            updateInitialInputs(); // ページロード時に初期値を設定
+
+            // 並び替え機能
+            sortSelect.addEventListener('change', () => {
+                renderItems();
+            });
+
+            sortDirectionBtn.addEventListener('click', () => {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                updateSortIcon();
+                renderItems();
+            });
+
+            function updateSortIcon() {
+                if (sortDirection === 'asc') {
+                    sortDirectionIcon.setAttribute('d', "M3 4h13M3 8h9m-9 4h9m9-4v10l-4 4m0 0l-4-4m4 4V7");
+                } else {
+                    sortDirectionIcon.setAttribute('d', "M3 4h13M3 8h9m-9 4h9m9-4v10l-4 4m0 0l-4-4m4 4V7");
+                }
+            }
+
+
+            function sortItems(filteredItems) {
+                const sortValue = sortSelect.value;
+                let sorted = [...filteredItems]; // 元の配列を変更しないようにコピー
+
+                switch (sortValue) {
+                    case 'remaining':
+                        sorted.sort((a, b) => {
+                            // NaNをソートできるように修正
+                            const remainingA = isNaN(a.remainingPercentage) ? -1 : a.remainingPercentage;
+                            const remainingB = isNaN(b.remainingPercentage) ? -1 : b.remainingPercentage;
+                            const result = remainingA - remainingB;
+                            return sortDirection === 'asc' ? result : -result;
+                        });
+                        break;
+                    case 'name':
+                        sorted.sort((a, b) => {
+                            const result = a.name.localeCompare(b.name, 'ja');
+                            return sortDirection === 'asc' ? result : -result;
+                        });
+                        break;
+                    case 'purchaseDate':
+                        sorted.sort((a, b) => {
+                            const dateA = new Date(a.purchaseDate);
+                            const dateB = new Date(b.purchaseDate);
+                            const result = dateA - dateB;
+                            return sortDirection === 'asc' ? result : -result;
+                        });
+                        break;
+                }
+                return sorted;
+            }
+            
+            // 新規追加ボタンでモーダルを表示
+            addItemBtn.addEventListener('click', () => {
+                addItemModal.classList.remove('hidden');
+                updateDaysToFinishAverage(); // モーダル表示時に平均値を更新
+            });
+
+            // モーダルを閉じるボタン
+            closeAddModalBtn.addEventListener('click', () => {
+                addItemModal.classList.add('hidden');
+                addItemForm.reset();
+                purchaseDateInput.value = today.toISOString().split('T')[0];
+                updateInitialInputs();
+            });
+
+            // モーダルの外側をクリックして閉じる
+            addItemModal.addEventListener('click', (e) => {
+                if (e.target === addItemModal) {
+                    addItemModal.classList.add('hidden');
+                    addItemForm.reset();
+                    purchaseDateInput.value = today.toISOString().split('T')[0];
+                    updateInitialInputs();
+                }
+            });
+            
+            // 新規追加モーダルでの消耗品名入力時に、既存のアイテムと照合して平均値を計算
+            itemNameInput.addEventListener('input', updateDaysToFinishAverage);
+
+            function updateDaysToFinishAverage() {
+                const currentName = itemNameInput.value.trim();
+                if (currentName === '') {
+                    daysToFinishAverage.textContent = '';
+                    daysToFinishInput.value = '';
+                    return;
+                }
+
+                const matchingItems = items.filter(item => item.name === currentName && item.purchaseDates && item.purchaseDates.length >= 2);
+                
+                if (matchingItems.length > 0) {
+                    // 複数のアイテムが同じ名前で存在する場合、それぞれの purchaseDates から間隔を計算
+                    const allIntervals = matchingItems.flatMap(item => {
+                        const intervals = [];
+                        // 過去の購入日を降順にソート
+                        const sortedDates = item.purchaseDates.map(d => new Date(d)).sort((a, b) => b - a);
+                        
+                        // 最新の3つの間隔を計算
+                        for (let i = 0; i < sortedDates.length - 1 && i < 3; i++) {
+                            const diffTime = Math.abs(sortedDates[i].getTime() - sortedDates[i + 1].getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            intervals.push(diffDays);
+                        }
+                        return intervals;
+                    });
+                    
+                    if (allIntervals.length > 0) {
+                        const averageDays = allIntervals.reduce((sum, current) => sum + current, 0) / allIntervals.length;
+                        const roundedAverage = Math.round(averageDays);
+                        daysToFinishAverage.textContent = `過去の購入日から推測される消費日数: ${roundedAverage}日`;
+                        daysToFinishInput.value = roundedAverage;
+                    } else {
+                        daysToFinishAverage.textContent = '';
+                        daysToFinishInput.value = '';
+                    }
+                } else {
+                    daysToFinishAverage.textContent = '';
+                    daysToFinishInput.value = '';
+                }
+            }
+
+
+            // 自動計算を更新する関数
+            function updateInitialInputs() {
+                const purchaseDateStr = purchaseDateInput.value;
+                const daysToFinish = parseInt(daysToFinishInput.value);
+
+                if (purchaseDateStr && daysToFinish > 0) {
+                    const purchaseDate = new Date(purchaseDateStr);
+                    const today = new Date();
+                    const timeDiff = today.getTime() - purchaseDate.getTime();
+                    const daysPassed = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                    
+                    const dailyDepletionRate = daysToFinish > 0 ? 100 / daysToFinish : 0;
+                    const initialRemainingPercentage = Math.max(0, 100 - (daysPassed * dailyDepletionRate));
+
+                    // ラジオボタンの状態に応じて入力値を更新
+                    if (percentageRadio.checked) {
+                        initialRemainingInput.value = Math.round(initialRemainingPercentage);
+                    } else if (daysPassedRadio.checked) {
+                        daysPassedInput.value = daysPassed;
+                    }
+                } else {
+                    // daysToFinishが0以下の場合は初期値をリセット
+                    initialRemainingInput.value = 100;
+                    daysPassedInput.value = '';
+                }
+            }
+
+            // ラジオボタンの変更イベント
+            percentageRadio.addEventListener('change', () => {
+                percentageInputContainer.classList.remove('hidden');
+                daysPassedInputContainer.classList.add('hidden');
+                updateInitialInputs();
+            });
+            daysPassedRadio.addEventListener('change', () => {
+                daysPassedInputContainer.classList.remove('hidden');
+                percentageInputContainer.classList.add('hidden');
+                updateInitialInputs();
+            });
+
+            // 日付と日数の入力値変更イベントで自動計算
+            purchaseDateInput.addEventListener('input', updateInitialInputs);
+            daysToFinishInput.addEventListener('input', updateInitialInputs);
+
+            addItemForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const itemName = itemNameInput.value;
+                const itemCategory = itemCategorySelect.value;
+                const daysToFinish = parseInt(daysToFinishInput.value);
+                const purchaseDate = purchaseDateInput.value;
+                const notes = itemNotesInput.value.trim();
+
+                if (!itemCategory) {
+                    console.log('カテゴリーを選択してください。');
+                    return;
+                }
+
+                let initialRemainingPercentage;
+                const method = document.querySelector('input[name="remainingMethod"]:checked').value;
+
+                if (method === 'percentage') {
+                    initialRemainingPercentage = parseInt(initialRemainingInput.value);
+                } else { // daysPassed
+                    const daysPassed = parseInt(daysPassedInput.value);
+                    const dailyDepletionRate = daysToFinish > 0 ? 100 / daysToFinish : 0;
+                    initialRemainingPercentage = Math.max(0, 100 - (daysPassed * dailyDepletionRate));
+                }
+
+                const newItem = {
+                    id: Date.now(),
+                    name: itemName,
+                    category: itemCategory,
+                    purchaseDates: [purchaseDate], // 複数購入日を保持
+                    daysToFinish: daysToFinish,
+                    initialRemainingPercentage: initialRemainingPercentage,
+                    buyLink: '',
+                    notes: notes // メモを追加
+                };
+
+                items.push(newItem);
+                localStorage.setItem('inventoryItems', JSON.stringify(items));
+                
+                // アイテムを追加した後に再描画
+                updateAllItemRemaining();
+                renderItems();
+
+                // フォームをリセットしてモーダルを閉じる
+                addItemForm.reset();
+                addItemModal.classList.add('hidden');
+                purchaseDateInput.value = today.toISOString().split('T')[0];
+                updateInitialInputs();
+                renderCategoryFilters();
+            });
+
+            // フィルターと並び替えを考慮してアイテムをレンダリングする関数
+            function renderItems() {
+                // 選択されているカテゴリーを取得
+                const selectedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked'))
+                    .map(cb => cb.value)
+                    .filter(value => value !== 'すべて');
+                
+                let filteredItems = items;
+
+                // カテゴリーフィルターを適用するロジックを修正
+                const allCategoriesChecked = categoryFilterContainer.querySelector('input[value="すべて"]').checked;
+
+                if (!allCategoriesChecked) {
+                    // 「すべて」がチェックされていない場合
+                    if (selectedCategories.length === 0) {
+                        // かつ、特定のカテゴリーも選択されていない場合は、何も表示しない
+                        filteredItems = [];
+                    } else {
+                        // 特定のカテゴリーが選択されている場合は、そのカテゴリーでフィルタリング
+                        filteredItems = items.filter(item => selectedCategories.includes(item.category));
+                    }
+                }
+                
+                // 残量フィルターを適用
+                if (lowStockFilterCheckbox.checked) {
+                    filteredItems = filteredItems.filter(item => item.remainingPercentage <= 20);
+                }
+
+                const sortedItems = sortItems(filteredItems);
+
+                itemsContainer.innerHTML = '';
+                if (sortedItems.length === 0) {
+                    itemsContainer.innerHTML = '<p class="text-center text-gray-500 mt-10">該当する消耗品がありません。</p>';
+                }
+
+                sortedItems.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'item-card item-card-hover p-4 flex items-center justify-between';
+                    
+                    // 残量に応じてバーの色と通知マークを決定
+                    let barColor = '#3b82f6'; // blue-500
+                    let remainingDisplay = `${Math.round(item.remainingPercentage)}%`;
+                    
+                    // remainingPercentageがNaNの場合の表示を修正
+                    if (isNaN(item.remainingPercentage)) {
+                        remainingDisplay = '---';
+                    } else if (item.remainingPercentage <= 20) {
+                        barColor = '#ef4444'; // red-500
+                    } else if (item.remainingPercentage <= 50) {
+                        barColor = '#facc15'; // yellow-400
+                    }
+
+                    // 購入リンクの存在をチェックしてボタンのHTMLを生成
+                    const buyButtonHtml = item.buyLink && item.buyLink.trim() !== ''
+                        ? `<a href="${item.buyLink}" target="_blank" class="buy-button px-4 py-2 text-sm font-medium rounded-md">BUY</a>`
+                        : '';
+
+                    // 日付を「YYYY/MM/DD」形式に変換
+                    const formattedDate = item.purchaseDate.replace(/-/g, '/');
+
+                    itemDiv.innerHTML = `
+                        <div class="flex-1">
+                            <h3 class="text-lg font-medium text-gray-800 flex items-center space-x-2">
+                                <span>${item.name}</span>
+                                <span class="text-xs font-semibold text-gray-500 bg-gray-200 px-2 py-1 rounded-full">${item.category}</span>
+                            </h3>
+                            ${item.notes && item.notes.trim() !== '' ? `<p class="text-xs text-gray-600 italic mt-1">${item.notes}</p>` : ''}
+                            <div class="flex items-center space-x-2 mt-1">
+                                <canvas id="canvas-${item.id}" width="150" height="16" class="rounded-full"></canvas>
+                                <span class="text-sm font-semibold text-gray-600">${remainingDisplay}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">前回購入日: ${formattedDate}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${buyButtonHtml}
+                            <button class="details-button px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors" data-id="${item.id}">詳細</button>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(itemDiv);
+                    
+                    // Canvasに描画
+                    drawCanvas(item.id, item.remainingPercentage, barColor);
+                });
+
+                // 詳細ボタンとリセットボタンにイベントリスナーを追加
+                document.querySelectorAll('.details-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const id = parseInt(e.target.dataset.id);
+                        const item = items.find(i => i.id === id);
+                        if (item) {
+                            showDetails(item);
+                        }
+                    });
+                });
+            }
+
+            // 低在庫フィルターの変更イベント
+            lowStockFilterCheckbox.addEventListener('change', () => {
+                renderItems();
+            });
+
+            // メッセージボックスを表示する関数
+            function showMessage(message, type = 'success') {
+                let classes = '';
+                if (type === 'success') {
+                    classes = 'bg-green-500 text-white';
+                } else if (type === 'error') {
+                    classes = 'bg-red-500 text-white';
+                }
+
+                messageBox.textContent = message;
+                messageBox.className = classes + ' visible';
+
+                setTimeout(() => {
+                    messageBox.className = classes.replace('visible', '');
+                }, 3000);
+            }
+
+            // リストをクリップボードにコピーする関数 (iFrame対応版)
+            function copyTextToClipboard(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.top = 0;
+                textarea.style.left = 0;
+                textarea.style.width = '2em';
+                textarea.style.height = '2em';
+                textarea.style.padding = 0;
+                textarea.style.border = 'none';
+                textarea.style.outline = 'none';
+                textarea.style.boxShadow = 'none';
+                textarea.style.background = 'transparent';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showMessage('リストがクリップボードにコピーされました！', 'success');
+                    } else {
+                        showMessage('クリップボードへのコピーに失敗しました。', 'error');
+                    }
+                } catch (err) {
+                    showMessage('クリップボードへのコピーに失敗しました。', 'error');
+                    console.error('クリップボードへのコピーに失敗しました (Fallback):', err);
+                }
+                document.body.removeChild(textarea);
+            }
+
+            // リストをコピーボタンのイベントリスナー
+            copyListBtn.addEventListener('click', () => {
+                const lowStockItems = items.filter(item => item.remainingPercentage <= 20);
+                if (lowStockItems.length === 0) {
+                    showMessage('残量20%以下の消耗品はありません。', 'error');
+                    return;
+                }
+
+                const listText = lowStockItems.map(item => {
+                    // 余分な情報を削除して、タイトルのみにする
+                    return `- ${item.name}`.trim();
+                }).join('\n');
+                
+                const textToCopy = `【要購入！消耗品リスト】\n${listText}`;
+                copyTextToClipboard(textToCopy);
+            });
+
+            // Canvasにバーを描画する関数
+            function drawCanvas(id, percentage, color) {
+                const canvas = document.getElementById(`canvas-${id}`);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+                const radius = height / 2;
+
+                // 背景（空のバー）
+                ctx.fillStyle = '#e5e7eb'; // gray-200
+                ctx.beginPath();
+                ctx.moveTo(radius, 0);
+                ctx.lineTo(width - radius, 0);
+                ctx.arcTo(width, 0, width, height, radius);
+                ctx.arcTo(width, height, 0, height, radius);
+                ctx.arcTo(0, height, 0, 0, radius);
+                ctx.arcTo(0, 0, width, 0, radius);
+                ctx.fill();
+
+                // remainingPercentageがNaNの場合、バーを描画しない
+                if (isNaN(percentage)) {
+                    return;
+                }
+
+                // 残量バー
+                const fillWidth = (width - radius * 2) * (percentage / 100);
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(radius, 0);
+                ctx.lineTo(radius + fillWidth, 0);
+                ctx.arcTo(radius + fillWidth, 0, radius + fillWidth, height, radius);
+                ctx.arcTo(radius + fillWidth, height, 0, height, radius);
+                ctx.arcTo(0, height, 0, 0, radius);
+                ctx.arcTo(0, 0, width, 0, radius);
+                ctx.fill();
+            }
+
+            function showDetails(item) {
+                const detailsModal = document.createElement('div');
+                detailsModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4';
+                
+                // カテゴリーのオプションを動的に生成
+                const categories = ["キッチン用品", "ベビー用品", "日用品", "その他"];
+                const categoryOptions = categories.map(cat => 
+                    `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${cat}</option>`
+                ).join('');
+                
+                // remainingPercentageがNaNの場合は100%をデフォルト値とする
+                const currentRemaining = isNaN(item.remainingPercentage) ? 100 : Math.round(item.remainingPercentage);
+
+                // 過去の購入日入力フォームを動的に生成
+                // 購入日を降順にソートして表示
+                const sortedPurchaseDates = item.purchaseDates.sort((a, b) => new Date(b) - new Date(a));
+                const purchaseDatesHtml = sortedPurchaseDates.slice(0, 3).map((date, index) => {
+                    const label = index === 0 ? "前回購入日" : (index === 1 ? "前々回購入日" : "3回前購入日");
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">${label}</label>
+                            <input type="date" id="editPurchaseDate${index}" value="${date}" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    `;
+                }).join('');
+
+                detailsModal.innerHTML = `
+                    <div class="modal-content">
+                        <button class="close-modal-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">消耗品詳細と編集</h2>
+                        
+                        <!-- 消耗品情報の修正セクション -->
+                        <div class="mb-4">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">基本情報の修正</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">消耗品名</label>
+                                    <input type="text" id="editItemName" value="${item.name}" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">カテゴリー</label>
+                                    <select id="editItemCategory" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        ${categoryOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">約何日でなくなるか</label>
+                                    <input type="number" id="editDaysToFinish" value="${item.daysToFinish}" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <!-- 過去の購入日フォーム -->
+                                <div class="date-input-group">
+                                    ${purchaseDatesHtml}
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">購入サイトリンク (URL)</label>
+                                    <input type="text" id="editBuyLink" value="${item.buyLink}" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">メモ</label>
+                                    <textarea id="editItemNotes" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2">${item.notes || ''}</textarea>
+                                </div>
+                                <!-- 「保存する」ボタンをメモの下に移動 -->
+                                <div class="flex justify-end pt-2">
+                                    <button id="updateInfoBtn" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition-colors">保存する</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- 残量更新セクション -->
+                        <div class="space-y-3">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">残量を更新</h4>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">残量を手動で更新（%）</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" id="updatePercentageInput" placeholder="例: ${currentRemaining}" value="${currentRemaining}" class="w-20 p-2 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <span>%</span>
+                                    <button id="updatePercentageBtn" class="px-4 py-2 text-sm font-medium border border-blue-500 text-blue-500 bg-white hover:bg-blue-50 transition-colors rounded-md">更新</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">経過日数から更新（日）</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" id="updateDaysInput" placeholder="例: 10" class="w-20 p-2 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <span>日</span>
+                                    <button id="updateDaysBtn" class="px-4 py-2 text-sm font-medium border border-blue-500 text-blue-500 bg-white hover:bg-blue-50 transition-colors rounded-md">更新</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 「購入（リセット）」ボタンを中央に配置し、太字にする -->
+                        <div class="flex justify-center mt-6">
+                            <button id="resetButton" data-id="${item.id}" class="px-6 py-2 text-sm font-bold text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors">購入（リセット）</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(detailsModal);
+                
+                // モーダル内のボタンにイベントリスナーを設定
+                detailsModal.querySelector('.close-modal-btn').addEventListener('click', () => {
+                    detailsModal.remove();
+                });
+
+                // モーダルの外側をクリックして閉じる
+                detailsModal.addEventListener('click', (e) => {
+                    if (e.target === detailsModal) {
+                        detailsModal.remove();
+                    }
+                });
+
+                document.getElementById('resetButton').addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    const itemIndex = items.findIndex(i => i.id === id);
+                    if (itemIndex > -1) {
+                        const todayFormatted = new Date().toISOString().split('T')[0];
+                        
+                        // 最新の購入日を配列に追加し、3つに制限
+                        items[itemIndex].purchaseDates.unshift(todayFormatted); // unshiftで先頭に追加
+                        // 降順にソート
+                        items[itemIndex].purchaseDates.sort((a, b) => new Date(b) - new Date(a));
+                        items[itemIndex].purchaseDates = items[itemIndex].purchaseDates.slice(0, 3);
+                        
+                        items[itemIndex].purchaseDate = todayFormatted;
+                        items[itemIndex].initialRemainingPercentage = 100;
+                        items[itemIndex].remainingPercentage = 100;
+                        localStorage.setItem('inventoryItems', JSON.stringify(items));
+                        detailsModal.remove();
+                        
+                        // リセット後、現在の並び替え順を保持して再描画
+                        updateAllItemRemaining();
+                        renderItems();
+                    }
+                });
+
+                document.getElementById('updatePercentageBtn').addEventListener('click', () => {
+                    const inputValue = document.getElementById('updatePercentageInput').value.trim();
+                    const newRemainingPercentage = Math.min(100, Math.max(0, parseInt(inputValue)));
+                    
+                    const id = item.id;
+                    const itemIndex = items.findIndex(i => i.id === id);
+                    if (itemIndex > -1 && !isNaN(newRemainingPercentage)) {
+                        items[itemIndex].initialRemainingPercentage = newRemainingPercentage;
+                        items[itemIndex].remainingPercentage = newRemainingPercentage;
+                        localStorage.setItem('inventoryItems', JSON.stringify(items));
+                        detailsModal.remove();
+                        renderItems(); // 更新後、再描画
+                    }
+                });
+                
+                document.getElementById('updateDaysBtn').addEventListener('click', () => {
+                    const inputValue = document.getElementById('updateDaysInput').value.trim();
+                    const daysPassed = parseInt(inputValue);
+                    
+                    const id = item.id;
+                    const itemIndex = items.findIndex(i => i.id === id);
+                    if (itemIndex > -1 && !isNaN(daysPassed)) {
+                        const dailyDepletionRate = items[itemIndex].daysToFinish > 0 ? 100 / items[itemIndex].daysToFinish : 0;
+                        const newRemainingPercentage = Math.max(0, 100 - (daysPassed * dailyDepletionRate));
+                        
+                        const today = new Date();
+                        const newPurchaseDate = new Date(today.getTime() - (daysPassed * 1000 * 60 * 60 * 24));
+                        
+                        items[itemIndex].remainingPercentage = newRemainingPercentage;
+                        items[itemIndex].purchaseDate = newPurchaseDate.toISOString().split('T')[0];
+                        localStorage.setItem('inventoryItems', JSON.stringify(items));
+                        detailsModal.remove();
+                        renderItems(); // 更新後、再描画
+                    }
+                });
+
+                // 基本情報の修正ボタンにイベントリスナーを追加
+                document.getElementById('updateInfoBtn').addEventListener('click', () => {
+                    const id = item.id;
+                    const itemIndex = items.findIndex(i => i.id === id);
+                    if (itemIndex > -1) {
+                        const newName = document.getElementById('editItemName').value;
+                        const newCategory = document.getElementById('editItemCategory').value;
+                        const newDaysToFinish = parseInt(document.getElementById('editDaysToFinish').value);
+                        const newBuyLink = document.getElementById('editBuyLink').value;
+                        const newNotes = document.getElementById('editItemNotes').value.trim();
+                        
+                        // 過去の購入日データを更新
+                        const newPurchaseDates = [];
+                        for(let i = 0; i < 3; i++) {
+                            const dateInput = document.getElementById(`editPurchaseDate${i}`);
+                            if (dateInput && dateInput.value) {
+                                newPurchaseDates.push(dateInput.value);
+                            }
+                        }
+                        
+                        // データの更新
+                        items[itemIndex].name = newName;
+                        items[itemIndex].category = newCategory;
+                        items[itemIndex].daysToFinish = newDaysToFinish;
+                        // 無効な日付をフィルタリング
+                        const validDates = newPurchaseDates.filter(d => d && !isNaN(new Date(d)));
+                        items[itemIndex].purchaseDates = validDates.sort((a, b) => new Date(b) - new Date(a));
+                        items[itemIndex].purchaseDate = items[itemIndex].purchaseDates[0] || new Date().toISOString().split('T')[0];
+                        items[itemIndex].buyLink = newBuyLink; // 購入リンクを更新
+                        items[itemIndex].notes = newNotes; // メモを更新
+                        
+                        localStorage.setItem('inventoryItems', JSON.stringify(items));
+                        
+                        // 基本情報更新後、残量を再計算して表示を更新
+                        updateAllItemRemaining();
+                        detailsModal.remove();
+                        renderItems(); // 更新後、再描画
+                    }
+                });
+            }
+
+            // CSVエクスポート機能
+            exportCsvBtn.addEventListener('click', () => {
+                const headers = ["id", "name", "category", "purchaseDates", "daysToFinish", "initialRemainingPercentage", "remainingPercentage", "buyLink", "notes"];
+                const csvRows = [headers.join(',')];
+
+                items.forEach(item => {
+                    const values = headers.map(header => {
+                        let value = item[header];
+                        // purchaseDatesをJSON文字列に変換してエスケープ
+                        if (header === 'purchaseDates' && Array.isArray(value)) {
+                            value = JSON.stringify(value);
+                        }
+                        // 値にカンマや二重引用符が含まれる場合はエスケープ処理
+                        let escapedValue = String(value || '');
+                        if (escapedValue.includes(',') || escapedValue.includes('"')) {
+                            escapedValue = `"${escapedValue.replace(/"/g, '""')}"`;
+                        }
+                        return escapedValue;
+                    });
+                    csvRows.push(values.join(','));
+                });
+
+                const csvString = csvRows.join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'inventory.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // CSVインポート機能
+            importCsvInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const csvText = event.target.result;
+                        const rows = csvText.split('\n').filter(row => row.trim() !== '');
+                        const newItems = [];
+                        
+                        // ヘッダー行をスキップ
+                        const dataRows = rows.slice(1);
+                        dataRows.forEach(row => {
+                            const columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(col => col.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                            if (columns.length === 9) { // CSVの列数が正しいか確認
+                                let purchaseDates = [];
+                                try {
+                                    // CSVから読み込んだJSON文字列を解析
+                                    const parsedDates = JSON.parse(columns[3]);
+                                    if (Array.isArray(parsedDates)) {
+                                        // 配列の場合は、有効な日付のみをフィルタリング
+                                        purchaseDates = parsedDates.filter(d => d && !isNaN(new Date(d)));
+                                    } else if (parsedDates) {
+                                        // 単一の値の場合は配列に変換
+                                        purchaseDates = [parsedDates];
+                                    }
+                                } catch (e) {
+                                    // JSON.parseが失敗した場合、値をそのまま使用
+                                    if (columns[3]) {
+                                        purchaseDates = [columns[3]];
+                                    }
+                                }
+
+                                newItems.push({
+                                    id: parseInt(columns[0]),
+                                    name: columns[1],
+                                    category: columns[2],
+                                    purchaseDates: purchaseDates,
+                                    // daysToFinishがNaNの場合に備えて0にフォールバック
+                                    daysToFinish: parseInt(columns[4]) || 0,
+                                    // initialRemainingPercentageがNaNの場合に備えて0にフォールバック
+                                    initialRemainingPercentage: parseFloat(columns[5]) || 0,
+                                    // remainingPercentageがNaNの場合に備えて0にフォールバック
+                                    remainingPercentage: parseFloat(columns[6]) || 0,
+                                    buyLink: columns[7],
+                                    notes: columns[8],
+                                    purchaseDate: purchaseDates.length > 0 ? purchaseDates[0] : ''
+                                });
+                            }
+                        });
+
+                        // 既存のデータを上書き
+                        items = newItems;
+                        localStorage.setItem('inventoryItems', JSON.stringify(items));
+                        
+                        // インポート後にカテゴリーフィルターを再生成
+                        renderCategoryFilters();
+                        updateAllItemRemaining();
+                        renderItems();
+                        importCsvInput.value = ''; // 同じファイルを再選択できるようにする
+                    } catch (error) {
+                        console.error("CSV import error:", error);
+                        showMessage("CSVファイルの読み込み中にエラーが発生しました。", "error");
+                    }
+                };
+                reader.readAsText(file);
+            });
+        });
+    </script>
+</body>
+</html>
