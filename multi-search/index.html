@@ -153,7 +153,7 @@
             </label>
             <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                 <input type="checkbox" id="yahooShoppingCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
-                <span class="ml-2 text-gray-800 font-medium">ヤフーショッピング</span>
+                <span class="ml-2 text-gray-800 font-medium">Yahoo!</span>
             </label>
             <label class="flex items-center cursor-pointer p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                 <input type="checkbox" id="yahooCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md site-checkbox">
@@ -245,7 +245,7 @@
             linkButton.target = '_blank'; // 新しいタブで開く
             linkButton.rel = 'noopener noreferrer'; // セキュリティ対策
             linkButton.className = 'bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition duration-300 ease-in-out';
-            linkButton.textContent = '検索結果を見る';
+            linkButton.textContent = '開く';
 
             resultDiv.appendChild(siteNameSpan);
             resultDiv.appendChild(linkButton);
@@ -390,7 +390,7 @@
          * @param {string} keyword - 保存するキーワード
          */
         function saveKeyword(keyword) {
-            let savedKeywords = JSON.S.parse(localStorage.getItem(SAVED_KEYWORDS_KEY) || '[]');
+            let savedKeywords = JSON.parse(localStorage.getItem(SAVED_KEYWORDS_KEY) || '[]');
             if (!savedKeywords.includes(keyword)) {
                 savedKeywords.push(keyword);
                 localStorage.setItem(SAVED_KEYWORDS_KEY, JSON.stringify(savedKeywords));
@@ -531,3 +531,4 @@
     </script>
 </body>
 </html>
+```
