@@ -157,8 +157,8 @@
         </div>
 
         <!-- フィルターと並び替えセクション -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 mb-4">
-            <div id="categoryFilterContainer" class="flex flex-wrap gap-2">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div id="categoryFilterContainer" class="flex flex-wrap items-center gap-2">
                 <p class="text-sm font-medium text-gray-700">カテゴリー:</p>
                 <label class="checkbox-label">
                     <input type="checkbox" name="category" value="すべて" checked>
@@ -167,7 +167,7 @@
                 <!-- チェックボックスはJavaScriptで動的に追加されます -->
             </div>
             
-            <div class="flex items-center space-x-4">
+            <div class="flex flex-wrap items-center justify-start md:justify-end gap-x-4 gap-y-2">
                  <!-- 新しいチェックボックスを追加 -->
                 <label class="checkbox-label">
                     <input type="checkbox" id="lowStockFilter">
@@ -713,11 +713,11 @@
                                 <span class="text-xs font-semibold text-gray-500 bg-gray-200 px-2 py-1 rounded-full">${item.category}</span>
                             </h3>
                             ${item.notes && item.notes.trim() !== '' ? `<p class="text-xs text-gray-600 italic mt-1">${item.notes}</p>` : ''}
-                            <div class="flex items-center space-x-2 mt-1">
+                            <div class="flex items-center space-x-4 mt-1">
                                 <canvas id="canvas-${item.id}" width="150" height="16" class="rounded-full"></canvas>
-                                <span class="text-sm font-semibold text-gray-600">${remainingDisplay}</span>
+                                <span class="text-sm font-semibold text-gray-600 w-12 text-center">${remainingDisplay}</span>
+                                <span class="text-xs text-gray-500 whitespace-nowrap">前回購入日: ${formattedDate}</span>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">前回購入日: ${formattedDate}</p>
                         </div>
                         <div class="flex items-center space-x-2">
                             ${buyButtonHtml}
@@ -1172,3 +1172,4 @@
     </script>
 </body>
 </html>
+

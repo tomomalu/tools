@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8ea4e3af-9432-4c20-b287-c73ec231326a" name="変更" comment="intellJのxmlファイル等" />
+    <list default="true" id="8ea4e3af-9432-4c20-b287-c73ec231326a" name="変更" comment="homeにも追加" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,7 +13,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="update250919-3" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -44,9 +44,9 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "update250919-2",
+    "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Volumes/SSD/app/tools"
+    "last_opened_file_path": "/Volumes/SSD-PROJECT/tools"
   }
 }]]></component>
   <component name="TaskManager">
@@ -65,7 +65,23 @@
       <option name="project" value="LOCAL" />
       <updated>1758249034121</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="inventory-manager追加">
+      <option name="closed" value="true" />
+      <created>1758264111804</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1758264111804</updated>
+    </task>
+    <task id="LOCAL-00003" summary="homeにも追加">
+      <option name="closed" value="true" />
+      <created>1758264417031</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1758264417031</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -81,6 +97,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="intellJのxmlファイル等" />
-    <option name="LAST_COMMIT_MESSAGE" value="intellJのxmlファイル等" />
+    <MESSAGE value="inventory-manager追加" />
+    <MESSAGE value="homeにも追加" />
+    <option name="LAST_COMMIT_MESSAGE" value="homeにも追加" />
   </component>
 </project>
