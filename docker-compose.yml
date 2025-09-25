@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf  # これを追加
+    depends_on:
+      - php  # phpコンテナが起動してから起動する
+  
+  # PHP (アプリケーション実行環境)
+  php:
+    image: php:8.2-fpm  # 好きなPHPバージョンを指定
+    volumes:
+      - .:/var/www/html
+      # - ./docker/php/php.ini:/usr/local/etc/php/php.ini  # PHP設定ファイルをカスタマイズする場合
+  
+  # MySQL (データベース)
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306" # ホストの3306ポートをコンテナの3306ポートにマッピング
+    environment:
+      MYSQL_ROOT_PASSWORD: your_root_password
+      MYSQL_DATABASE: your_database_name
+      MYSQL_USER: your_user_name
+      MYSQL_PASSWORD: your_password
+    volumes:
+      - dbdata:/var/lib/mysql  # データを永続化
+      - ./docker/mysql/initdb:/docker-entrypoint-initdb.d # 初期データを投入する場合
+
+volumes:
+  dbdata:
